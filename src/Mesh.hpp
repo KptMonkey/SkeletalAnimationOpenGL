@@ -38,7 +38,12 @@ public:
                    glm::mat4 & parentMat,
                    std::vector<glm::mat4> & offsetMats,
                    std::vector<glm::mat4> & boneAnimationMat,
-                   std::vector<glm::mat4> & globalAnim);
+                   std::vector<glm::mat4> & globalAnim,
+                   float animationTime);
+
+
+   SkeletonNode *
+   findNode(SkeletonNode & node, std::string name);
 
    std::vector<VertexN>     m_Mesh;
    std::vector<glm::mat4>   m_BoneOffSet;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <chrono>
 #include "RenderAbstraction.hpp"
 #include "Camera.hpp"
 #include "Mesh.hpp"
@@ -25,8 +26,6 @@ int main() {
    std::string pointShaderVx = "shader/point.vert"; //Debug visualization
    std::string pointShaderFg = "shader/point.frag";
 
-   std::vector<glm::mat4> animMats;
-   float y = 0.0f;
    Shader shader;
    shader.bindShader(simpleShaderVx);
    shader.bindShader(simpleShaderFg);
@@ -52,16 +51,19 @@ int main() {
    animations.emplace_back(1.f);
    animations.emplace_back(1.f);
    glm::mat4 k(1.f);
+   auto start = std::chrono::steady_clock::now();
 
    int fps = 0;
-   while(fps<=400) {
+   while(fps<=500) {
       glViewport(0,0,800,600);
       rctx.enableDepthTest();
       rctx.clearColor(0.0f, 0.0f, 0.1f, 1.0f);
       rctx.clearColorBuffer();
       rctx.clearDepthBuffer();
-      mesh.animateSkeleton(mesh.m_Skeleton,animations[2],mesh.m_BoneOffSet,animations,s_rotations);
-      animations[2] = glm::rotate(animations[2],0.04f,glm::vec3(1.f, 0.f, 0.f));
+      glm::mat4 i(1.f);
+      auto end = std::chrono::steady_clock::now();
+      auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+      mesh.animateSkeleton(mesh.m_Skeleton,i ,mesh.m_BoneOffSet,animations,s_rotations, dur/1000.f);
 
       shader.activate();
       shader["mvp"] = cam.Projection * cam.View * model;
@@ -70,14 +72,6 @@ int main() {
          ss <<"bone_mat[";
          ss << i;
          ss << "]";
-//         glm::mat4 m(1.f);
-//         if (i==1) {
-//            r = glm::rotate(r,0.04f,glm::vec3(1.f, 0.f, 0.f));
-//            shader[ss.str()]=glm::inverse(mesh.m_BoneOffSet[i])*r*mesh.m_BoneOffSet[i];
-//         }
-//         else {
-//            shader[ss.str()]=m;
-//         }
          shader[ss.str()]=animations[i];
       }
 
