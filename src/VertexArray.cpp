@@ -109,3 +109,16 @@ void
 VertexArray::bindVertexArray() {
     glBindVertexArray(m_VAO);
 }
+
+void
+VertexArray::bindVBO(std::vector<int> const & vertices) {
+   GLuint vbo;
+   glBindVertexArray( m_VAO );
+   glGenBuffers( 1, &vbo );
+   glBindBuffer( GL_ARRAY_BUFFER, vbo );
+   glBufferData( GL_ARRAY_BUFFER, vertices.size()*sizeof( int ), &vertices[ 0 ], GL_STATIC_DRAW );
+   glVertexAttribIPointer(2,1,GL_INT, 0, nullptr);
+   glEnableVertexAttribArray(2);
+   glBindBuffer( GL_ARRAY_BUFFER, 0 );
+   glBindVertexArray( 0 );
+}

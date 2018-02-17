@@ -20,6 +20,9 @@ public:
     enableDepthTest();
 
     void
+    disableDepthTest();
+
+    void
     writeToDepthBuffer();
     void
     readOnlyDepthBuffer();

@@ -60,6 +60,11 @@ RenderContext::enableDepthTest() {
 }
 
 void
+RenderContext::disableDepthTest() {
+    glDisable(GL_DEPTH_TEST );
+}
+
+void
 RenderContext::writeToDepthBuffer() {
     glDepthMask( GL_TRUE );
     glDepthFunc( GL_LESS );

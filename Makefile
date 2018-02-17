@@ -1,5 +1,5 @@
-CF = -Wall --std=c++14 -g $(shell pkg-config --cflags)
-LF = -Wall --std=c++14  -lGL -lGLEW -lSDL2 -lSDL2_image -lassimp
+CF = -Wall --std=c++14 -ggdb
+LF = -Wall --std=c++14  -lGL -lGLEW -lSDL2 -lSDL2_image -lassimp 
 CXX = g++
 SRC = $(wildcard src/*.cpp)
 OBJ = $(SRC:src/%.cpp=obj/%.o)

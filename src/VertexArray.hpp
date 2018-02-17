@@ -38,7 +38,8 @@ public:
     createIndexBuffer(const std::vector<VertexT> &vertices, const std::vector<unsigned int> &indices );
     void
     createVertexArray( const std::vector<VertexN> &vertices );
-
+    void
+    bindVBO(std::vector<int> const & vertices);
 
     GLuint
     getVertexArray();
@@ -46,6 +47,7 @@ public:
     getSizeOfArray(){ return m_NoV; }
     void
     describeVertexArray( int shaderPos, int number, GlTypes t, int nov, GlBool normalized, int stride );
+
     void
     bindVertexArray();
 
