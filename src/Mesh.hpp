@@ -24,6 +24,11 @@ struct SkeletonNode {
    int                    numScale;
 };
 
+struct IndexedBoneName {
+   std::string name;
+   int         index;
+};
+
 class Mesh {
 public:
    void
@@ -31,7 +36,7 @@ public:
 
    void
    importSkeletonNode(aiNode * assimpNode, SkeletonNode & skNode,
-                      int index, std::vector<std::string> const & boneName);
+                      int index, std::vector<IndexedBoneName> const & boneName);
 
    void
    animateSkeleton(SkeletonNode & node,
@@ -48,6 +53,7 @@ public:
    std::vector<VertexN>     m_Mesh;
    std::vector<glm::mat4>   m_BoneOffSet;
    std::vector<glm::vec3>   m_BonePos;
-   std::vector<std::string> boneName;
+   std::vector<IndexedBoneName> boneName;
    SkeletonNode             m_Skeleton;
+   std::vector<IndexedBoneName> m_IndexedBoneName;
 };

@@ -134,7 +134,7 @@ Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationD
       auto bone = mesh->mBones[i];
       m_BoneOffSet.emplace_back(1.f);
       copyMatrix(bone->mOffsetMatrix,m_BoneOffSet.back());
-      boneName.emplace_back(bone->mName.C_Str());
+      boneName.emplace_back(IndexedBoneName{bone->mName.C_Str(), i});
       auto r = glm::column(m_BoneOffSet.back(),3);
       m_BonePos.emplace_back(r.x, r.y, r.z);
       for (std::size_t j=0; j<bone->mNumWeights; ++j) {
@@ -146,7 +146,7 @@ Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationD
 
    //Create own skeleton data structure to get rid of assimp during runtime
    auto root = scene->mRootNode;
-   importSkeletonNode(root,m_Skeleton,2,boneName);
+   importSkeletonNode(root,m_Skeleton,-1,boneName);
    printSkeleton(m_Skeleton);
 
    if (scene->mNumAnimations <=0) std::cout << "There are no animatoins\n";
@@ -201,7 +201,7 @@ void
 Mesh::importSkeletonNode(aiNode * assimpNode,
                    SkeletonNode & skNode,
                    int            index,
-                   std::vector<std::string> const & names) {
+                   std::vector<IndexedBoneName> const & names) {
 
    if (!assimpNode) {
       std::cout << "Node is nullptr \n";
@@ -211,11 +211,11 @@ Mesh::importSkeletonNode(aiNode * assimpNode,
 //   std::cout << "Nr of Childs:" << assimpNode->mNumChildren << std::endl;
 //   std::cout << "Index in con:" << index << std::endl;
    bool skip = false;
-   for (std::string bN : names) {
-      if (bN.compare(assimpNode->mName.C_Str())!=0) continue;
+   for (auto bN : names) {
+      if (bN.name.compare(assimpNode->mName.C_Str())!=0) continue;
       skNode.name        = assimpNode->mName.C_Str();
       skNode.numChildren = assimpNode->mNumChildren;
-      skNode.boneIndex   = index;
+      skNode.boneIndex   = bN.index;
       if (assimpNode->mNumChildren == 0) return;
       for (int i=0; i<assimpNode->mNumChildren; ++i) {
          skNode.children.emplace_back();
