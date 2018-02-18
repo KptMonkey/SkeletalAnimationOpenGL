@@ -41,6 +41,9 @@ public:
     void
     bindVBO(std::vector<int> const & vertices);
 
+    void
+    bindVBO(std::vector<glm::vec3> const & vertices);
+
     GLuint
     getVertexArray();
     int

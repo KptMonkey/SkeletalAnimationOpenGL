@@ -10,16 +10,16 @@ struct SkeletonNode {
    std::vector<SkeletonNode> children;
    std::string name;
    int numChildren;
-   int boneIndex;
+   int index;
 
    //Animation relevant stuff :D ;_;
-   std::vector<glm::vec3> positions;
+   std::vector<glm::vec3> transformations;
    std::vector<glm::quat> rotations;
    std::vector<glm::vec3> scales;
-   std::vector<double>    posTimes;
+   std::vector<double>    transTimes;
    std::vector<double>    rotTimes;
    std::vector<double>    scaleTimes;
-   int                    numPos;
+   int                    numTrans;
    int                    numRot;
    int                    numScale;
 };
@@ -43,17 +43,15 @@ public:
                    glm::mat4 & parentMat,
                    std::vector<glm::mat4> & offsetMats,
                    std::vector<glm::mat4> & boneAnimationMat,
-                   std::vector<glm::mat4> & globalAnim,
                    float animationTime);
 
 
    SkeletonNode *
    findNode(SkeletonNode & node, std::string name);
 
-   std::vector<VertexN>     m_Mesh;
-   std::vector<glm::mat4>   m_BoneOffSet;
-   std::vector<glm::vec3>   m_BonePos;
-   std::vector<IndexedBoneName> boneName;
-   SkeletonNode             m_Skeleton;
-   std::vector<IndexedBoneName> m_IndexedBoneName;
+   std::vector<VertexN>           m_Mesh;
+   std::vector<glm::mat4>         m_BoneOffSet;
+   std::vector<glm::vec3>         m_BonePos;
+   std::vector<IndexedBoneName>   boneName;
+   SkeletonNode                   m_Skeleton;
 };

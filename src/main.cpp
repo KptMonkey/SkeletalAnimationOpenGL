@@ -13,12 +13,6 @@ int main() {
    Camera cam = Camera(glm::vec3(0.0f, 0.0f,15.0f), glm::vec3(0.0f, 1.0f, -1.0f));
    double animationDuration = 0.0; // Would be a container for more animations
 
-   std::vector<glm::mat4> s_rotations;
-   s_rotations.emplace_back(1.f);
-   s_rotations.emplace_back(1.f);
-   s_rotations.emplace_back(1.f);
-   s_rotations[0]=glm::rotate(s_rotations[0],0.8f,glm::vec3(1.f,0.f,0.f));
-
    // Shader
    std::string simpleShaderVx = "shader/simple.vert";
    std::string simpleShaderFg = "shader/simple.frag";
@@ -45,17 +39,19 @@ int main() {
    p.createVertexArray(mesh.m_BonePos);
    p.describeVertexArray(0,3,GlTypes::Float, 3, GlBool::False,0);
    glm::mat4 model(1.f);
-   glm::mat4 r(1.f);
+
+   //Sucks though
    std::vector<glm::mat4> animations;
    animations.emplace_back(1.f);
    animations.emplace_back(1.f);
    animations.emplace_back(1.f);
-   glm::mat4 k(1.f);
+
    auto start = std::chrono::steady_clock::now();
 
    int fps = 0;
    while(fps<=500) {
       glViewport(0,0,800,600);
+//      p.bindVBO(mesh.m_BonePos);
       rctx.enableDepthTest();
       rctx.clearColor(0.0f, 0.0f, 0.1f, 1.0f);
       rctx.clearColorBuffer();
@@ -63,7 +59,7 @@ int main() {
       glm::mat4 i(1.f);
       auto end = std::chrono::steady_clock::now();
       auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-      mesh.animateSkeleton(mesh.m_Skeleton,i ,mesh.m_BoneOffSet,animations,s_rotations, dur/1000.f);
+      mesh.animateSkeleton(mesh.m_Skeleton,i ,mesh.m_BoneOffSet,animations, dur/1000.f);
 
       shader.activate();
       shader["mvp"] = cam.Projection * cam.View * model;
