@@ -54,4 +54,6 @@ public:
    std::vector<glm::vec3>         m_BonePos;
    std::vector<IndexedBoneName>   boneName;
    SkeletonNode                   m_Skeleton;
+   std::vector<glm::ivec3>        m_BoneIds;
+   std::vector<glm::fvec3>        m_Weights;
 };

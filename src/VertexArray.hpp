@@ -39,10 +39,10 @@ public:
     void
     createVertexArray( const std::vector<VertexN> &vertices );
     void
-    bindVBO(std::vector<int> const & vertices);
+    bindVBO(std::vector<glm::ivec3> const & vertices);
 
     void
-    bindVBO(std::vector<glm::vec3> const & vertices);
+    bindVBO(std::vector<glm::fvec3> const & vertices);
 
     GLuint
     getVertexArray();

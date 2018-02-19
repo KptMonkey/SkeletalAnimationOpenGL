@@ -4,5 +4,5 @@ in vec3 nrm;
 in vec3 color;
 void main()
 {
-  col = vec4(nrm, 1.0);
+  col = vec4(nrm,1.0);
 }

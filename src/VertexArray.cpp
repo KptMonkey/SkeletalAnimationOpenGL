@@ -111,27 +111,27 @@ VertexArray::bindVertexArray() {
 }
 
 void
-VertexArray::bindVBO(std::vector<int> const & vertices) {
+VertexArray::bindVBO(std::vector<glm::ivec3> const & vertices) {
    GLuint vbo;
    glBindVertexArray( m_VAO );
    glGenBuffers( 1, &vbo );
    glBindBuffer( GL_ARRAY_BUFFER, vbo );
-   glBufferData( GL_ARRAY_BUFFER, vertices.size()*sizeof( int ), &vertices[ 0 ], GL_STATIC_DRAW );
-   glVertexAttribIPointer(2,1,GL_INT, 0, nullptr);
+   glBufferData( GL_ARRAY_BUFFER, vertices.size()*sizeof( glm::ivec3 ), &vertices[ 0 ], GL_STATIC_DRAW );
+   glVertexAttribIPointer(2,3,GL_INT, 0, nullptr);
    glEnableVertexAttribArray(2);
    glBindBuffer( GL_ARRAY_BUFFER, 0 );
    glBindVertexArray( 0 );
 }
 
 void
-VertexArray::bindVBO(std::vector<glm::vec3> const & vertices) {
+VertexArray::bindVBO(std::vector<glm::fvec3> const & vertices) {
    GLuint vbo;
    glBindVertexArray( m_VAO );
    glGenBuffers( 1, &vbo );
    glBindBuffer( GL_ARRAY_BUFFER, vbo );
-   glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof( glm::vec3 ), &vertices[ 0 ], GL_STATIC_DRAW);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof( GLfloat ), (GLvoid*)(0 * sizeof(GLfloat) ) );
-   glEnableVertexAttribArray(1);
+   glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(glm::fvec3 ), &vertices[ 0 ], GL_STATIC_DRAW);
+   glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof( GLfloat ), (GLvoid*)(0 * sizeof(GLfloat) ) );
+   glEnableVertexAttribArray(3);
    glBindBuffer( GL_ARRAY_BUFFER, 0 );
    glBindVertexArray( 0 );
 }

@@ -29,6 +29,17 @@ printSkeleton(SkeletonNode const & node) {
 }
 
 void
+addWeight(float weight, int id, glm::ivec3 & boneIds, glm::fvec3 & weights) {
+   for (int i=0; i<3; ++i) {
+      if (weights[i] == 0.0f) {
+         weights[i] = weight;
+         boneIds[i] = id;
+      }
+   }
+   std::cout << boneIds.x << " " << weights.x << " " << boneIds.y << " " << weights.y << std::endl;
+}
+
+void
 Mesh::animateSkeleton(SkeletonNode & node,
                       glm::mat4 & parentMat,
                       std::vector<glm::mat4> & offsetMats,
@@ -127,6 +138,10 @@ Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationD
 
    if (mesh->HasBones()) {
       boneIds.resize(m_Mesh.size());
+      for (int r=0; r<m_Mesh.size(); ++r) {
+         m_BoneIds.emplace_back(0);
+         m_Weights.emplace_back(0.f);
+      }
       for (std::size_t i=0; i<mesh->mNumBones; ++i)  {
          auto bone = mesh->mBones[i];
          m_BoneOffSet.emplace_back(1.f);
@@ -135,7 +150,8 @@ Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationD
 
          for (std::size_t j=0; j<bone->mNumWeights; ++j) {
             auto weight = bone->mWeights[j];
-            if (weight.mWeight>0.5f) boneIds[weight.mVertexId]=i;
+            addWeight(weight.mWeight,i,m_BoneIds[weight.mVertexId], m_Weights[weight.mVertexId]);
+
          }
          //For Debug Visualization
          auto r = glm::column(m_BoneOffSet.back(),3);

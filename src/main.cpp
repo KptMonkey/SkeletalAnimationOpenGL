@@ -24,13 +24,14 @@ int main() {
    shader.bindShader(simpleShaderVx);
    shader.bindShader(simpleShaderFg);
    Mesh mesh;
-   mesh.loadMesh("media/monkeyS.dae", bones, animationDuration);
+   mesh.loadMesh("media/ArmyPilot.dae", bones, animationDuration);
    VertexArray va;
 
    va.createVertexArray(mesh.m_Mesh);
    va.describeVertexArray(0,3,GlTypes::Float, 6, GlBool::False,0);
    va.describeVertexArray(1,3,GlTypes::Float, 6, GlBool::False,3);
-   va.bindVBO(bones);
+   va.bindVBO(mesh.m_BoneIds);
+   va.bindVBO(mesh.m_Weights);
 
    Shader pointShader;
    pointShader.bindShader(pointShaderVx);
@@ -45,9 +46,27 @@ int main() {
    animations.emplace_back(1.f);
    animations.emplace_back(1.f);
    animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
+   animations.emplace_back(1.f);
 
    auto start = std::chrono::steady_clock::now();
-
+   model = glm::scale(model,glm::vec3(0.04f));
    int fps = 0;
    while(fps<=500) {
       glViewport(0,0,800,600);
@@ -59,7 +78,7 @@ int main() {
       glm::mat4 i(1.f);
       auto end = std::chrono::steady_clock::now();
       auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-      mesh.animateSkeleton(mesh.m_Skeleton,i ,mesh.m_BoneOffSet,animations, dur/1000.f);
+//      mesh.animateSkeleton(mesh.m_Skeleton,i ,mesh.m_BoneOffSet,animations, dur/1000.f);
 
       shader.activate();
       shader["mvp"] = cam.Projection * cam.View * model;
