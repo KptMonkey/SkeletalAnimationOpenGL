@@ -1,16 +1,17 @@
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <assimp/scene.h>
-#include <array>
-#include "RenderAbstraction.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include "RenderAbstraction.hpp"
 
 struct SkeletonNode {
    std::vector<SkeletonNode> children;
    std::string name;
-   int numChildren;
-   int index;
+   int         numChildren;
+   int         index;
+   glm::mat4   relTransformation;
 
    //Animation relevant stuff :D ;_;
    std::vector<glm::vec3> transformations;
@@ -32,28 +33,31 @@ struct IndexedBoneName {
 class Mesh {
 public:
    void
-   loadMesh(std::string path, std::vector<int> & boneIds, double & animationDuration);
+   loadMesh(std::string path);
 
-   void
-   importSkeletonNode(aiNode * assimpNode, SkeletonNode & skNode,
-                      int index, std::vector<IndexedBoneName> const & boneName);
 
    void
    animateSkeleton(SkeletonNode & node,
-                   glm::mat4 & parentMat,
-                   std::vector<glm::mat4> & offsetMats,
+                   glm::mat4 const & parentMat,
                    std::vector<glm::mat4> & boneAnimationMat,
                    float animationTime);
+private:
+   void
+   createSkeleton(aiNode * assimpNode, SkeletonNode & skNode);
 
+   void
+   createAnimation(aiScene const * scene);
 
    SkeletonNode *
    findNode(SkeletonNode & node, std::string name);
 
-   std::vector<VertexN>           m_Mesh;
+   std::vector<std::string>             m_AnimatedBones;
+   std::unordered_map<std::string,int>  m_BoneIndex;
+   float                                m_AnimationDuration;
+public:
+   SkeletonNode                   m_Skeleton;
+   std::vector<unsigned int>      m_Index;
+   std::vector<VertexS>           m_Mesh;
    std::vector<glm::mat4>         m_BoneOffSet;
    std::vector<glm::vec3>         m_BonePos;
-   std::vector<IndexedBoneName>   boneName;
-   SkeletonNode                   m_Skeleton;
-   std::vector<glm::ivec3>        m_BoneIds;
-   std::vector<glm::fvec3>        m_Weights;
 };

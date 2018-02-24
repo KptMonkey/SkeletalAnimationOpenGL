@@ -20,7 +20,14 @@ struct VertexN{
     glm::vec3 Normal;
 };
 
-enum class GlTypes { Float };
+struct VertexS{
+    glm::vec3  Position;
+    glm::vec3  Normal;
+    glm::vec4  Weight;
+    glm::ivec4 BoneId;
+};
+
+enum class GlTypes { Float, Int };
 enum class GlBool { True, False };
 class VertexArray{
 public:
@@ -37,12 +44,16 @@ public:
     void
     createIndexBuffer(const std::vector<VertexT> &vertices, const std::vector<unsigned int> &indices );
     void
+    createIndexBuffer(const std::vector<VertexN> &vertices, const std::vector<unsigned int> &indices );
+    void
+    createIndexBuffer(const std::vector<VertexS> &vertices, const std::vector<unsigned int> &indices );
+    void
     createVertexArray( const std::vector<VertexN> &vertices );
     void
-    bindVBO(std::vector<glm::ivec3> const & vertices);
+    bindVBO(std::vector<glm::ivec4> const & vertices);
 
     void
-    bindVBO(std::vector<glm::fvec3> const & vertices);
+    bindVBO(std::vector<glm::vec4> const & vertices);
 
     GLuint
     getVertexArray();

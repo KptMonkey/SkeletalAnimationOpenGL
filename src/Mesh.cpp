@@ -2,9 +2,9 @@
 #include "Mesh.hpp"
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
-#include <glm/gtc/matrix_transform.hpp>
 
 void
 copyMatrix(aiMatrix4x4 aMatrix, glm::mat4 & mat) { //The copy fixes a crash...
@@ -21,7 +21,6 @@ copyVector(aiVector3D const & aVector, glm::vec3 & vec) {
 
 void
 printSkeleton(SkeletonNode const & node) {
-   std::cout<<node.name << " has " << node.numChildren << " children " << "and index: " << node.index << std::endl;
    if (node.numChildren==0) return;
    for ( auto child : node.children) {
       printSkeleton(child);
@@ -29,28 +28,27 @@ printSkeleton(SkeletonNode const & node) {
 }
 
 void
-addWeight(float weight, int id, glm::ivec3 & boneIds, glm::fvec3 & weights) {
-   for (int i=0; i<3; ++i) {
-      if (weights[i] == 0.0f) {
+addWeight(float weight, int id, glm::ivec4 & boneIds, glm::vec4 & weights) {
+   for (int i=0; i<4; ++i) {
+      if (weights[i] == 0.0 ) {
          weights[i] = weight;
          boneIds[i] = id;
+         break;
       }
    }
-   std::cout << boneIds.x << " " << weights.x << " " << boneIds.y << " " << weights.y << std::endl;
 }
 
 void
 Mesh::animateSkeleton(SkeletonNode & node,
-                      glm::mat4 & parentMat,
-                      std::vector<glm::mat4> & offsetMats,
+                      glm::mat4  const & parentMat,
                       std::vector<glm::mat4> & boneAnimationMats,
                       float animationTime) {
 
    glm::mat4 localMat(1.f);
    glm::mat4 ourMat = parentMat;
-   //Iterpolate transformation matrix
-   animationTime = std::fmod(animationTime,0.833f);
+   animationTime = std::fmod(animationTime,m_AnimationDuration);
 
+   // Make 1 function out of the transformation calculations...
    glm::mat4 transNode(1.f);
    if (node.numTrans > 0) {
       int prev = 0;
@@ -70,7 +68,26 @@ Mesh::animateSkeleton(SkeletonNode & node,
 
       transNode = glm::translate(transNode, lerped);
    }
-   //TODO Scale
+
+   glm::mat4 scaleNode(1.f);
+   if (node.numScale > 0) {
+      int prev = 0;
+      int next = 0;
+      for (int i=0; i<node.numScale-1; ++i) {
+         prev = i;
+         next = i+1;
+         if (node.scaleTimes[next]>=animationTime) break;
+      }
+
+      float total = node.scaleTimes[next]-node.scaleTimes[prev];
+      float t     = (animationTime-node.scaleTimes[prev])/total;
+
+      auto pT     = node.scales[prev];
+      auto nT     = node.scales[next];
+      auto lerped = pT*(1.f-t) + nT*t;
+
+      scaleNode = glm::scale(scaleNode, lerped);
+   }
 
    glm::mat4 rotNode(1.f);
    if (node.numRot > 0) {
@@ -85,35 +102,34 @@ Mesh::animateSkeleton(SkeletonNode & node,
       float total_t = node.rotTimes[next]-node.rotTimes[prev];
       float t       = (animationTime-node.rotTimes[prev])/total_t;
 
-      auto pR     = node.rotations[prev];
-      auto nR     = node.rotations[next];
+      auto pR = node.rotations[prev];
+      auto nR = node.rotations[next];
+      // Rotation has to be done in positive direction!
+      if (glm::dot(pR,nR)<0.f) {
+         pR *=-1.f;
+      }
       glm::quat q = glm::mix(pR,nR,t);
+
       rotNode     = glm::toMat4(q);
    }
 
-   localMat = transNode*rotNode;
+   auto n = std::find(std::begin(m_AnimatedBones), std::end(m_AnimatedBones),node.name);
 
-   int boneIdx = node.index;
-   if (boneIdx>-1) {
-      ourMat = parentMat *  localMat * offsetMats[boneIdx];
-      boneAnimationMats[boneIdx]=ourMat;
-      //Debug
-//      auto r = glm::column(boneAnimationMats[boneIdx],3);
-//      m_BonePos[boneIdx] = glm::vec3(r.x, r.y, r.z);
-   }
+   if (n!=std::end(m_AnimatedBones)) localMat = transNode * rotNode * scaleNode;
+   else                              localMat = node.relTransformation;
 
+   ourMat = parentMat * localMat;
+   boneAnimationMats[node.index]=ourMat*m_BoneOffSet[node.index];
    for (auto & child : node.children) {
-      animateSkeleton(child, ourMat, offsetMats, boneAnimationMats, animationTime);
+      animateSkeleton(child, ourMat, boneAnimationMats, animationTime);
    }
-
-
 }
 
 void
-Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationDuration) {
+Mesh::loadMesh(std::string path) {
 
    Assimp::Importer importer;
-   auto scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals);
+   auto scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices  );
 
    if (!scene) {
       std::cout << "Could not load scene! \n";
@@ -124,65 +140,120 @@ Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationD
       std::cout << "Scene is without meshes! \n";
       return;
    }
+   int vert = 0;
+   int bid = 0;
 
-   auto mesh = scene->mMeshes[0]; // One mesh is enough at the moment
+   for (std::size_t k =0; k<scene->mNumMeshes; ++k) {
+      auto const & mesh = scene->mMeshes[k];
 
-   if (mesh->HasPositions() & mesh->HasNormals()) {
-      for (std::size_t i=0; i<mesh->mNumVertices; ++i) {
-         VertexN vec;
-         copyVector(mesh->mVertices[i], vec.Position);
-         copyVector(mesh->mNormals[i],vec.Normal);
-         m_Mesh.push_back(vec);
+      if (!mesh->HasPositions() && !mesh->HasNormals()) {
+         std::cout << "Has no Vertices or Normals\n";
+         return;
       }
-   }
+      for (std::size_t i=0; i<mesh->mNumVertices; ++i) {
+         VertexS sec;
 
-   if (mesh->HasBones()) {
-      boneIds.resize(m_Mesh.size());
-      for (int r=0; r<m_Mesh.size(); ++r) {
-         m_BoneIds.emplace_back(0);
-         m_Weights.emplace_back(0.f);
+         copyVector(mesh->mVertices[i], sec.Position);
+         copyVector(mesh->mNormals[i],sec.Normal);
+         m_Mesh.push_back(sec);
+      }
+
+      for ( std::size_t i=0; i<mesh->mNumFaces; ++i) {
+         aiFace& face = mesh->mFaces[i];
+         m_Index.push_back(vert+face.mIndices[0]);
+         m_Index.push_back(vert+face.mIndices[1]);
+         m_Index.push_back(vert+face.mIndices[2]);
+      }
+      if (!mesh->HasBones()) {
+         std::cout << "Has no Bones\n";
+         return;
       }
       for (std::size_t i=0; i<mesh->mNumBones; ++i)  {
-         auto bone = mesh->mBones[i];
+         auto const & bone = mesh->mBones[i];
          m_BoneOffSet.emplace_back(1.f);
          copyMatrix(bone->mOffsetMatrix,m_BoneOffSet.back());
-         boneName.emplace_back(IndexedBoneName{bone->mName.C_Str(), i});
+         auto boneIndex = m_BoneIndex.find(bone->mName.C_Str());
 
-         for (std::size_t j=0; j<bone->mNumWeights; ++j) {
-            auto weight = bone->mWeights[j];
-            addWeight(weight.mWeight,i,m_BoneIds[weight.mVertexId], m_Weights[weight.mVertexId]);
-
+         if (boneIndex == std::end(m_BoneIndex)) {
+            m_BoneIndex[bone->mName.C_Str()] = i + bid;
+            for (std::size_t j=0; j<bone->mNumWeights; ++j) {
+               auto weight = bone->mWeights[j];
+               addWeight(weight.mWeight, i+bid,
+                         m_Mesh[weight.mVertexId+vert].BoneId, m_Mesh[weight.mVertexId+vert].Weight);
+            }
+         }
+         else {
+            for (std::size_t j=0; j<bone->mNumWeights; ++j) {
+               auto weight = bone->mWeights[j];
+               addWeight(weight.mWeight, boneIndex->second,
+                         m_Mesh[weight.mVertexId+vert].BoneId, m_Mesh[weight.mVertexId+vert].Weight);
+            }
          }
          //For Debug Visualization
          auto r = glm::column(m_BoneOffSet.back(),3);
          m_BonePos.emplace_back(r.x, r.y, r.z);
       }
-      boneIds.shrink_to_fit();
+      bid  += mesh->mNumBones;
+      vert += mesh->mNumVertices;
    }
 
-   //Create own skeleton data structure to get rid of assimp during runtime
+   //TODO: This stuff shouldn't be in the loadMesh function
    auto root = scene->mRootNode;
-   importSkeletonNode(root,m_Skeleton,-1,boneName);
-   printSkeleton(m_Skeleton);
+   createSkeleton(root, m_Skeleton);
+//   printSkeleton(m_Skeleton); //Debug
+   createAnimation(scene);
+}
 
+void
+Mesh::createSkeleton(aiNode * assimpNode, SkeletonNode & skNode) {
+
+   if (!assimpNode) {
+      std::cout << "Node is nullptr \n";
+      return;
+   }
+   bool skip = false;
+
+   auto boneIndex = m_BoneIndex.find(assimpNode->mName.C_Str());
+
+   if (boneIndex!=std::end(m_BoneIndex)) {
+      skNode.name        = assimpNode->mName.C_Str();
+      skNode.numChildren = assimpNode->mNumChildren;
+      skNode.index       = boneIndex->second;
+      copyMatrix(assimpNode->mTransformation,skNode.relTransformation);
+
+      if (assimpNode->mNumChildren == 0) return;
+
+      for (std::size_t i=0; i<assimpNode->mNumChildren; ++i) {
+         if (m_BoneIndex.find(assimpNode->mName.C_Str()) == std::end(m_BoneIndex)) continue;
+         skNode.children.emplace_back();
+         createSkeleton(assimpNode->mChildren[i], skNode.children.back());
+      }
+      skip = true;
+   }
+
+   if (skip) return;
+
+   for (std::size_t i=0; i<assimpNode->mNumChildren; ++i) {
+      createSkeleton(assimpNode->mChildren[i], skNode);
+   }
+}
+
+void
+Mesh::createAnimation(aiScene const * scene) {
    if (scene->mNumAnimations <=0) {
       std::cout << "There are no animatoins\n";
       return;
    }
-
+   std::cout << scene->mNumAnimations << std::endl;
    auto anim = scene->mAnimations[0]; // First animation;
-   std::cout << "Animation name: " << anim->mName.C_Str() << std::endl;
-   std::cout << "Animation channel: " << anim->mNumChannels << std::endl;
-   std::cout << "Animation duration: " << anim->mDuration << std::endl;
-   std::cout << "Animation mesh channels: " << anim->mNumMeshChannels << std::endl;
-   std::cout << "Animation ticks per second: " << anim->mTicksPerSecond << std::endl;
-
-   animationDuration = anim->mDuration;
+   m_AnimationDuration = anim->mDuration;
+   std::cout <<anim->mNumChannels << std::endl;
 
    for (std::size_t i=0; i<anim->mNumChannels; ++i) {
       auto channel = anim->mChannels[i];
       SkeletonNode * n = findNode(m_Skeleton, channel->mNodeName.C_Str());
       if (!n) continue;
+      m_AnimatedBones.emplace_back(n->name);
 
       for (std::size_t p = 0; p<channel->mNumPositionKeys; ++p) {
          glm::vec3 vec;
@@ -211,42 +282,6 @@ Mesh::loadMesh(std::string path, std::vector<int> & boneIds, double & animationD
          n->rotTimes.emplace_back(channel->mRotationKeys[r].mTime);
          n->numRot = channel->mNumRotationKeys;
       }
-   }
-}
-
-void
-Mesh::importSkeletonNode(aiNode * assimpNode,
-                   SkeletonNode & skNode,
-                   int            index,
-                   std::vector<IndexedBoneName> const & names) {
-
-   if (!assimpNode) {
-      std::cout << "Node is nullptr \n";
-      return;
-   }
-//   std::cout << "Name:" << assimpNode->mName.C_Str() << std::endl;
-//   std::cout << "Nr of Childs:" << assimpNode->mNumChildren << std::endl;
-//   std::cout << "Index in con:" << index << std::endl;
-   bool skip = false;
-   for (auto const & bN : names) {
-      if (bN.name.compare(assimpNode->mName.C_Str())!=0) continue;
-
-      skNode.name        = assimpNode->mName.C_Str();
-      skNode.numChildren = assimpNode->mNumChildren;
-      skNode.index       = bN.index;
-      if (assimpNode->mNumChildren == 0) return;
-
-      for (std::size_t i=0; i<assimpNode->mNumChildren; ++i) {
-         skNode.children.emplace_back();
-         importSkeletonNode(assimpNode->mChildren[i], skNode.children.back(), i, names);
-      }
-      skip = true;
-
-   }
-   if (skip) return;
-
-   for (std::size_t i=0; i<assimpNode->mNumChildren; ++i) {
-      importSkeletonNode(assimpNode->mChildren[i], skNode, index, names);
    }
 }
 
