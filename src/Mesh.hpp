@@ -6,15 +6,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include "RenderAbstraction.hpp"
 
-struct SkeletonNode {
-   std::vector<SkeletonNode> children;
-   std::string name;
-   int         numChildren;
-   int         index;
-   glm::mat4   relTransformation;
-
-   //Animation relevant stuff :D ;_;
-   std::vector<glm::vec3> transformations;
+struct Transformation {
+   std::vector<glm::vec3> translations;
    std::vector<glm::quat> rotations;
    std::vector<glm::vec3> scales;
    std::vector<double>    transTimes;
@@ -25,9 +18,19 @@ struct SkeletonNode {
    int                    numScale;
 };
 
-struct IndexedBoneName {
+struct SkeletonNode {
+   std::vector<SkeletonNode> children;
    std::string name;
+   int         numChildren;
    int         index;
+   glm::mat4   relTransformation;
+
+   std::unordered_map<std::string, Transformation> animations;
+};
+
+struct AnimationData {
+   std::vector<std::string> animatedBones;
+   float                    animationDuration;
 };
 
 class Mesh {
@@ -37,10 +40,11 @@ public:
 
 
    void
-   animateSkeleton(SkeletonNode & node,
-                   glm::mat4 const & parentMat,
-                   std::vector<glm::mat4> & boneAnimationMat,
-                   float animationTime);
+   animate(SkeletonNode & node,
+           glm::mat4 const & parentMat,
+           std::vector<glm::mat4> & boneAnimationMat,
+           float animationTime,
+           std::string animationName);
 private:
    void
    createSkeleton(aiNode * assimpNode, SkeletonNode & skNode);
@@ -51,7 +55,7 @@ private:
    SkeletonNode *
    findNode(SkeletonNode & node, std::string name);
 
-   std::vector<std::string>             m_AnimatedBones;
+   std::unordered_map<std::string, AnimationData>  m_AnimationInfo;
    std::unordered_map<std::string,int>  m_BoneIndex;
    float                                m_AnimationDuration;
 public:

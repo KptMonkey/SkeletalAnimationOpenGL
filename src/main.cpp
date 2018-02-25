@@ -9,7 +9,7 @@
 
 int main() {
    RenderContext rctx;
-   Camera cam = Camera(glm::vec3(0.0f, 0.0f,30.0f), glm::vec3(0.0f, 1.0f, -1.0f));
+   Camera cam = Camera(glm::vec3(0.0f, 5.0f,30.0f), glm::vec3(0.0f, 1.0f, -1.0f));
 
    // Shader
    std::string simpleShaderVx = "shader/simple.vert";
@@ -22,14 +22,14 @@ int main() {
    shader.bindShader(simpleShaderVx);
    shader.bindShader(simpleShaderFg);
    Mesh mesh;
-   mesh.loadMesh("media/ArmyPilot.dae");
+   mesh.loadMesh("media/ArmyPilot.x");
    VertexArray va;
 
    va.createIndexBuffer(mesh.m_Mesh, mesh.m_Index);
-   va.describeVertexArray(0,3,GlTypes::Float, 14, GlBool::False,0);
-   va.describeVertexArray(1,3,GlTypes::Float, 14, GlBool::False,3);
-   va.describeVertexArray(2,4,GlTypes::Float, 14, GlBool::False,6);
-   va.describeVertexArray(3,4,GlTypes::Int, 14, GlBool::False,10);
+   va.describeVertexArray(0, 3, GlTypes::Float, 14, GlBool::False, 0);
+   va.describeVertexArray(1, 3, GlTypes::Float, 14, GlBool::False, 3);
+   va.describeVertexArray(2, 4, GlTypes::Float, 14, GlBool::False, 6);
+   va.describeVertexArray(3, 4, GlTypes::Int,   14, GlBool::False, 10);
 
    Shader pointShader;
    pointShader.bindShader(pointShaderVx);
@@ -46,8 +46,57 @@ int main() {
    }
    auto start = std::chrono::steady_clock::now();
    model = glm::scale(model,glm::vec3(0.08f));
-   int fps = 0;
-   while(fps<=700) {
+   bool running = true;
+   while(running) {
+      SDL_Event e;
+      while (SDL_PollEvent(&e)) {
+         switch (e.type) {
+
+         case SDL_QUIT:
+            running = false;
+            break;
+
+         case SDL_KEYDOWN:
+            if (e.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+               running = false;
+               break;
+            }
+            if (e.key.keysym.scancode == SDL_SCANCODE_W) {
+               model = glm::translate(model, glm::vec3(0.f,0.f,-1.0f));
+               auto end = std::chrono::steady_clock::now();
+               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+               glm::mat4 i(1.f);
+               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Run_Forwards");
+               break;
+            }
+            if (e.key.keysym.scancode == SDL_SCANCODE_S) {
+               model = glm::translate(model, glm::vec3(0.f,0.f,1.0f));
+               auto end = std::chrono::steady_clock::now();
+               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+               glm::mat4 i(1.f);
+               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Run_backwards");
+               break;
+            }
+            if (e.key.keysym.scancode == SDL_SCANCODE_A) {
+               model = glm::translate(model, glm::vec3(-1.f,0.f,0.0f));
+               auto end = std::chrono::steady_clock::now();
+               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+               glm::mat4 i(1.f);
+               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Strafe_Right");
+               break;
+            }
+            if (e.key.keysym.scancode == SDL_SCANCODE_D) {
+               model = glm::translate(model, glm::vec3(1.f,0.f,0.0f));
+               auto end = std::chrono::steady_clock::now();
+               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+               glm::mat4 i(1.f);
+               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Strafe_Left");
+               break;
+            }
+         default: break;
+         }
+      }
+
       glViewport(0,0,800,600);
 //      p.bindVBO(mesh.m_BonePos);
       rctx.enableDepthTest();
@@ -55,16 +104,13 @@ int main() {
       rctx.clearColorBuffer();
       rctx.clearDepthBuffer();
 
-      auto end = std::chrono::steady_clock::now();
-      auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
 
-      glm::mat4 i(1.f);
-      mesh.animateSkeleton(mesh.m_Skeleton, i, animations, dur/1000.f);
-      model = glm::rotate(model,0.01f,glm::vec3(0.f,1.f, 0.f));
+//      glm::mat4 i(1.f);
+//      mesh.animate(mesh.m_Skeleton, i, animations, dur/1000.f);
 
       shader.activate();
       shader["mvp"] = cam.Projection * cam.View * model;
-      for (int i = 0; i<68; ++i) {
+      for (int i = 0; i<mesh.m_BoneOffSet.size(); ++i) {
          std::stringstream ss;
          ss <<"bone_mat[";
          ss << i;
@@ -82,6 +128,5 @@ int main() {
 //      glEnable(GL_PROGRAM_POINT_SIZE);
 //      rctx.draw(p,PrimitiveType::Points);
       rctx.swapBuffers();
-      ++fps;
    }
 }

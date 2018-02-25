@@ -14,16 +14,10 @@ while(render) {
   auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
 
   glm::mat4 i(1.f);
-  mesh.animateSkeleton(mesh.m_Skeleton, i, animations, dur/1000.f);
+  mesh.animate(mesh.m_Skeleton, i, boneAnimations, dur/1000.f,"animationName");
 
-  //Init shader with bone animations for example like that
-  for (int i = 0; i<mesh.m_BoneOffSet.size(); ++i) {
-    std::stringstream ss;
-    ss <<"bone_mat[";
-    ss << i;
-    ss << "]";
-    shader[ss.str()]=animations[i];
-  }
+  //Init shader 
+  
   // Draw mesh
 }
 

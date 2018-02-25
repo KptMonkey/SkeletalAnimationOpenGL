@@ -7,7 +7,7 @@
 #include <assimp/postprocess.h>
 
 void
-copyMatrix(aiMatrix4x4 aMatrix, glm::mat4 & mat) { //The copy fixes a crash...
+copyMatrix(aiMatrix4x4 const & aMatrix, glm::mat4 & mat) {
    assert(sizeof(mat) == sizeof(aMatrix));
    memcpy(&mat, &aMatrix, sizeof(aMatrix));
    mat = glm::transpose(mat);
@@ -39,97 +39,101 @@ addWeight(float weight, int id, glm::ivec4 & boneIds, glm::vec4 & weights) {
 }
 
 void
-Mesh::animateSkeleton(SkeletonNode & node,
-                      glm::mat4  const & parentMat,
-                      std::vector<glm::mat4> & boneAnimationMats,
-                      float animationTime) {
+Mesh::animate(SkeletonNode & node,
+              glm::mat4  const & parentMat,
+              std::vector<glm::mat4> & boneAnimationMats,
+              float animationTime,
+              std::string animationName) {
 
    glm::mat4 localMat(1.f);
    glm::mat4 ourMat = parentMat;
-   animationTime = std::fmod(animationTime,m_AnimationDuration);
+   float animationDuration = m_AnimationInfo[animationName].animationDuration;
+   animationTime = std::fmod(animationTime, animationDuration);
 
    // Make 1 function out of the transformation calculations...
+   auto const & trfm = node.animations[animationName];
    glm::mat4 transNode(1.f);
-   if (node.numTrans > 0) {
+   if (trfm.numTrans > 0) {
       int prev = 0;
       int next = 0;
-      for (int i=0; i<node.numTrans-1; ++i) {
+      for (int i=0; i<trfm.numTrans-1; ++i) {
          prev = i;
          next = i+1;
-         if (node.transTimes[next]>=animationTime) break;
+         if (trfm.transTimes[next]>=animationTime) break;
       }
 
-      float total = node.transTimes[next]-node.transTimes[prev];
-      float t     = (animationTime-node.transTimes[prev])/total;
+      float total = trfm.transTimes[next]-trfm.transTimes[prev];
+      float t     = (animationTime-trfm.transTimes[prev])/total;
 
-      auto pT     = node.transformations[prev];
-      auto nT     = node.transformations[next];
+      auto pT     = trfm.translations[prev];
+      auto nT     = trfm.translations[next];
       auto lerped = pT*(1.f-t) + nT*t;
 
       transNode = glm::translate(transNode, lerped);
    }
 
    glm::mat4 scaleNode(1.f);
-   if (node.numScale > 0) {
+   if (trfm.numScale > 0) {
       int prev = 0;
       int next = 0;
-      for (int i=0; i<node.numScale-1; ++i) {
+      for (int i=0; i<trfm.numScale-1; ++i) {
          prev = i;
          next = i+1;
-         if (node.scaleTimes[next]>=animationTime) break;
+         if (trfm.scaleTimes[next]>=animationTime) break;
       }
 
-      float total = node.scaleTimes[next]-node.scaleTimes[prev];
-      float t     = (animationTime-node.scaleTimes[prev])/total;
+      float total = trfm.scaleTimes[next]-trfm.scaleTimes[prev];
+      float t     = (animationTime-trfm.scaleTimes[prev])/total;
 
-      auto pT     = node.scales[prev];
-      auto nT     = node.scales[next];
+      auto pT     = trfm.scales[prev];
+      auto nT     = trfm.scales[next];
       auto lerped = pT*(1.f-t) + nT*t;
 
       scaleNode = glm::scale(scaleNode, lerped);
    }
 
    glm::mat4 rotNode(1.f);
-   if (node.numRot > 0) {
+   if (trfm.numRot > 0) {
       int prev = 0;
       int next = 0;
-      for (int i=0; i<node.numTrans-1; ++i) {
+      for (int i=0; i<trfm.numTrans-1; ++i) {
          prev = i;
          next = i+1;
-         if (node.rotTimes[next]>=animationTime) break;
+         if (trfm.rotTimes[next]>=animationTime) break;
       }
 
-      float total_t = node.rotTimes[next]-node.rotTimes[prev];
-      float t       = (animationTime-node.rotTimes[prev])/total_t;
+      float total_t = trfm.rotTimes[next]-trfm.rotTimes[prev];
+      float t       = (animationTime-trfm.rotTimes[prev])/total_t;
 
-      auto pR = node.rotations[prev];
-      auto nR = node.rotations[next];
+      auto pR = trfm.rotations[prev];
+      auto nR = trfm.rotations[next];
       // Rotation has to be done in positive direction!
       if (glm::dot(pR,nR)<0.f) {
          pR *=-1.f;
       }
       glm::quat q = glm::mix(pR,nR,t);
-
       rotNode     = glm::toMat4(q);
    }
 
-   auto n = std::find(std::begin(m_AnimatedBones), std::end(m_AnimatedBones),node.name);
+   auto const & animatedBones = m_AnimationInfo[animationName].animatedBones;
+   auto n = std::find(std::begin(animatedBones), std::end(animatedBones),node.name);
 
-   if (n!=std::end(m_AnimatedBones)) localMat = transNode * rotNode * scaleNode;
-   else                              localMat = node.relTransformation;
+   if (n!=std::end(animatedBones)) localMat = transNode * rotNode * scaleNode;
+   else                                              localMat = node.relTransformation;
 
    ourMat = parentMat * localMat;
    boneAnimationMats[node.index]=ourMat*m_BoneOffSet[node.index];
    for (auto & child : node.children) {
-      animateSkeleton(child, ourMat, boneAnimationMats, animationTime);
+      animate(child, ourMat, boneAnimationMats, animationTime,animationName);
    }
+
 }
 
 void
 Mesh::loadMesh(std::string path) {
 
    Assimp::Importer importer;
-   auto scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices  );
+   auto scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices);
 
    if (!scene) {
       std::cout << "Could not load scene! \n";
@@ -241,46 +245,56 @@ Mesh::createSkeleton(aiNode * assimpNode, SkeletonNode & skNode) {
 void
 Mesh::createAnimation(aiScene const * scene) {
    if (scene->mNumAnimations <=0) {
-      std::cout << "There are no animatoins\n";
+      std::cout << "There are no animations\n";
       return;
    }
    std::cout << scene->mNumAnimations << std::endl;
-   auto anim = scene->mAnimations[0]; // First animation;
-   m_AnimationDuration = anim->mDuration;
-   std::cout <<anim->mNumChannels << std::endl;
+   for (int i =0; i < scene->mNumAnimations; ++i) {
+      auto anim = scene->mAnimations[i];
+      std::cout << anim->mName.C_Str() << std::endl;
+   }
 
-   for (std::size_t i=0; i<anim->mNumChannels; ++i) {
-      auto channel = anim->mChannels[i];
-      SkeletonNode * n = findNode(m_Skeleton, channel->mNodeName.C_Str());
-      if (!n) continue;
-      m_AnimatedBones.emplace_back(n->name);
+   for (int a =0; a < scene->mNumAnimations; ++a) {
+      auto anim = scene->mAnimations[a];
+      auto const & animName = anim->mName.C_Str();
+      m_AnimationInfo[animName].animationDuration = anim->mDuration;
 
-      for (std::size_t p = 0; p<channel->mNumPositionKeys; ++p) {
-         glm::vec3 vec;
-         copyVector(channel->mPositionKeys[p].mValue,vec);
-         n->transformations.emplace_back(vec);
-         n->transTimes.emplace_back(channel->mPositionKeys[p].mTime);
-         n->numTrans = channel->mNumPositionKeys;;
-      }
+      for (std::size_t i=0; i<anim->mNumChannels; ++i) {
+         auto channel = anim->mChannels[i];
+         SkeletonNode * n = findNode(m_Skeleton, channel->mNodeName.C_Str());
+         if (!n) continue;
 
-      for (std::size_t s = 0; s<channel->mNumScalingKeys; ++s) {
-         glm::vec3 vec;
-         copyVector(channel->mScalingKeys[s].mValue,vec);
-         n->scales.emplace_back(vec);
-         n->scaleTimes.emplace_back(channel->mScalingKeys[s].mTime);
-         n->numScale = channel->mNumScalingKeys;
-      }
+         m_AnimationInfo[animName].animatedBones.emplace_back(n->name);
 
-      for (std::size_t r = 0; r<channel->mNumRotationKeys; ++r) {
-         glm::quat q;
-         auto rot = channel->mRotationKeys[r].mValue;
-         q.x = rot.x;
-         q.y = rot.y;
-         q.z = rot.z;
-         q.w = rot.w;
-         n->rotations.emplace_back(q);
-         n->rotTimes.emplace_back(channel->mRotationKeys[r].mTime);
-         n->numRot = channel->mNumRotationKeys;
+         auto & t = n->animations[animName];
+
+         for (std::size_t p = 0; p<channel->mNumPositionKeys; ++p) {
+            glm::vec3 vec;
+            copyVector(channel->mPositionKeys[p].mValue,vec);
+            t.translations.emplace_back(vec);
+            t.transTimes.emplace_back(channel->mPositionKeys[p].mTime);
+            t.numTrans = channel->mNumPositionKeys;;
+         }
+
+         for (std::size_t s = 0; s<channel->mNumScalingKeys; ++s) {
+            glm::vec3 vec;
+            copyVector(channel->mScalingKeys[s].mValue,vec);
+            t.scales.emplace_back(vec);
+            t.scaleTimes.emplace_back(channel->mScalingKeys[s].mTime);
+            t.numScale = channel->mNumScalingKeys;
+         }
+
+         for (std::size_t r = 0; r<channel->mNumRotationKeys; ++r) {
+            glm::quat q;
+            auto rot = channel->mRotationKeys[r].mValue;
+            q.x = rot.x;
+            q.y = rot.y;
+            q.z = rot.z;
+            q.w = rot.w;
+            t.rotations.emplace_back(q);
+            t.rotTimes.emplace_back(channel->mRotationKeys[r].mTime);
+            t.numRot = channel->mNumRotationKeys;
+         }
       }
    }
 }
