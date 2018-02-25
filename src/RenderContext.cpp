@@ -16,7 +16,7 @@ RenderContext::RenderContext() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,16);
 
-    m_Window = SDL_CreateWindow("penis",
+    m_Window = SDL_CreateWindow("Penis",
             0, 0,
             800, 600,
             SDL_WINDOW_OPENGL /*| SDL_WINDOW_RESIZABLE*/);
@@ -27,13 +27,23 @@ RenderContext::RenderContext() {
     glewExperimental = true;
     glewInit();
 
-    m_Quad.createVertexArray(quad);
+    std::vector<float> quad = {
+       -1.0f,  1.0f,  0.0f, 1.0f,
+       -1.0f, -1.0f,  0.0f, 0.0f,
+        1.0f, -1.0f,  1.0f, 0.0f,
+
+       -1.0f,  1.0f,  0.0f, 1.0f,
+        1.0f, -1.0f,  1.0f, 0.0f,
+        1.0f,  1.0f,  1.0f, 1.0f
+     };
+
+    m_Quad.createVertexArray<float>(quad);
     m_Quad.describeVertexArray(0,2,GlTypes::Float, 4, GlBool::False, 0);
     m_Quad.describeVertexArray(1,2,GlTypes::Float, 4, GlBool::False, 2);
 }
 
 int
-map_to_gl( PrimitiveType p) {
+mapToGl( PrimitiveType p) {
     const int lut[] = {
         GL_POINTS, GL_TRIANGLE_STRIP, GL_TRIANGLES
     };
@@ -41,12 +51,12 @@ map_to_gl( PrimitiveType p) {
 }
 
 int
-map_to_gl( StateType s) {
+mapToGl( StateType s) {
     const int lut[] = {
             GL_DEPTH_TEST, GL_STENCIL, GL_BLEND, GL_CULL_FACE };
     return lut[ static_cast<int>( s )];
 }
-int map_to_gl ( DepthFunction d ) {
+int mapToGl ( DepthFunction d ) {
     const int lut[] = {
         GL_ALWAYS, GL_NEVER, GL_LESS, GL_EQUAL, GL_LEQUAL,
         GL_GREATER, GL_NOTEQUAL, GL_GEQUAL
@@ -65,44 +75,44 @@ RenderContext::disableDepthTest() {
 }
 
 void
-RenderContext::writeToDepthBuffer() {
-    glDepthMask( GL_TRUE );
-    glDepthFunc( GL_LESS );
+RenderContext::writeToDepthBuffer(DepthFunction d) {
+    glDepthMask(GL_TRUE);
+    glDepthFunc(mapToGl(d));
 }
 
 void
 RenderContext::readOnlyDepthBuffer() {
-    glDepthMask( GL_FALSE ); //wrong
+    glDepthMask(GL_FALSE); //wrong
 }
 
 void
-RenderContext::setDepthFunction( DepthFunction d ) {
-    glDepthFunc ( map_to_gl( d  ) );
+RenderContext::setDepthFunction(DepthFunction d) {
+    glDepthFunc ( mapToGl( d  ) );
 }
 
 void
-RenderContext::clearColor( float r, float g, float b, float a ) {
+RenderContext::clearColor(float r, float g, float b, float a) {
     glClearColor( r, g, b, a );
 }
 void
 RenderContext::clearColorBuffer() {
-    glClear( GL_COLOR_BUFFER_BIT );
+    glClear(GL_COLOR_BUFFER_BIT);
 }
 void
 RenderContext::clearDepthBuffer() {
-    glClear( GL_DEPTH_BUFFER_BIT );
+    glClear(GL_DEPTH_BUFFER_BIT);
 }
 
 void
 RenderContext::draw( VertexArray & VertexArray,
                      PrimitiveType p) {
-    glDrawArrays( map_to_gl( p ), 0, VertexArray.getSizeOfArray() );
+    glDrawArrays( mapToGl( p ), 0, VertexArray.getSize() );
     glBindVertexArray( 0 );
-
 }
+
 void
 RenderContext::drawIndex(PrimitiveType p, int size) {
-    glDrawElements(map_to_gl( p ), size, GL_UNSIGNED_INT, 0);
+    glDrawElements(mapToGl( p ), size, GL_UNSIGNED_INT, 0);
     glBindVertexArray( 0 );
 
 }
@@ -114,7 +124,7 @@ RenderContext::drawDepthMap(Shader & shader, Texture & texture) {
     texture.activate(0);
     clearDepthBuffer();
     m_Quad.bindVertexArray();
-    draw(m_Quad,PrimitiveType::Triangles);
+    draw(m_Quad,PrimitiveType::Triangle);
 }
 
 void

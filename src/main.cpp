@@ -25,7 +25,7 @@ int main() {
    mesh.loadMesh("media/ArmyPilot.x");
    VertexArray va;
 
-   va.createIndexBuffer(mesh.m_Mesh, mesh.m_Index);
+   va.createIndexBuffer<VertexS>(mesh.m_Mesh, mesh.m_Index);
    va.describeVertexArray(0, 3, GlTypes::Float, 14, GlBool::False, 0);
    va.describeVertexArray(1, 3, GlTypes::Float, 14, GlBool::False, 3);
    va.describeVertexArray(2, 4, GlTypes::Float, 14, GlBool::False, 6);
@@ -35,7 +35,7 @@ int main() {
    pointShader.bindShader(pointShaderVx);
    pointShader.bindShader(pointShaderFg);
    VertexArray p;
-   p.createVertexArray(mesh.m_BonePos);
+   p.createVertexArray<glm::vec3>(mesh.m_BonePos);
    p.describeVertexArray(0,3,GlTypes::Float, 3, GlBool::False,0);
    glm::mat4 model(1.f);
 
@@ -119,7 +119,7 @@ int main() {
       }
 
       va.bindVertexArray();
-      rctx.drawIndex(PrimitiveType::Triangles, mesh.m_Index.size() );
+      rctx.drawIndex(PrimitiveType::Triangle, mesh.m_Index.size() );
 //      // Debug Visualization of bone positions
 //      rctx.disableDepthTest();
 //      pointShader.activate();

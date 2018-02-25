@@ -6,39 +6,37 @@
 
 class Shader{
 public:
-    Shader();
-    ~Shader(){}
-    void
-    bindShader( std::string path );
+   Shader();
+   ~Shader(){}
 
-//    private:
+   void
+   bindShader(std::string path);
 
-    std::string
-    readShader( std::string path );
+   bool
+   readShader(std::string path, std::string & shader);
 
-    void
-    activate();
+   void
+   activate();
 
+   Shader
+   operator[](std::string const & name);
 
-    Shader
-    operator[]( std::string const & name );
+   void
+   operator= (glm::mat4 const & mat);
 
-    void
-    operator= ( glm::mat4 const & mat );
+   void
+   operator= (glm::vec4 const & vec);
 
-    void
-    operator= ( glm::vec4 const & vec );
+   void
+   operator= (glm::vec3 const & vec);
 
-    void
-    operator= ( glm::vec3 const & vec );
+   void
+   operator= (int const & num);
 
-    void
-    operator= ( int const & num );
+   void
+   operator= (float const & num);
 
-    void
-    operator= ( float const & num );
-
-    GLuint m_Program;
+   GLuint m_Program;
 private:
-    GLuint m_Location;
+   GLuint m_Location;
 };
