@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -24,13 +26,14 @@ struct SkeletonNode {
    int         numChildren;
    int         index;
    glm::mat4   relTransformation;
-
+   bool        isRoot;
    std::unordered_map<std::string, Transformation> animations;
 };
 
 struct AnimationData {
    std::vector<std::string> animatedBones;
    float                    animationDuration;
+   std::string              name;
 };
 
 class Mesh {
@@ -45,6 +48,12 @@ public:
            std::vector<glm::mat4> & boneAnimationMat,
            float animationTime,
            std::string animationName);
+
+   void
+   initIdle(){
+      m_LastAnimation = m_AnimationInfo["Idle"];
+   }
+
 private:
    void
    createSkeleton(aiNode * assimpNode, SkeletonNode & skNode);
@@ -56,8 +65,9 @@ private:
    findNode(SkeletonNode & node, std::string name);
 
    std::unordered_map<std::string, AnimationData>  m_AnimationInfo;
-   std::unordered_map<std::string,int>  m_BoneIndex;
-   float                                m_AnimationDuration;
+   std::unordered_map<std::string,int>             m_BoneIndex;
+   float                                           m_AnimationDuration;
+   AnimationData                                   m_LastAnimation;
 public:
    SkeletonNode                   m_Skeleton;
    std::vector<unsigned int>      m_Index;

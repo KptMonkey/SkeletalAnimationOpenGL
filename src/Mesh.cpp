@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
-
+static float blend = 0.f;
 void
 copyMatrix(aiMatrix4x4 const & aMatrix, glm::mat4 & mat) {
    assert(sizeof(mat) == sizeof(aMatrix));
@@ -39,20 +39,7 @@ addWeight(float weight, int id, glm::ivec4 & boneIds, glm::vec4 & weights) {
 }
 
 void
-Mesh::animate(SkeletonNode & node,
-              glm::mat4  const & parentMat,
-              std::vector<glm::mat4> & boneAnimationMats,
-              float animationTime,
-              std::string animationName) {
-
-   glm::mat4 localMat(1.f);
-   glm::mat4 ourMat = parentMat;
-   float animationDuration = m_AnimationInfo[animationName].animationDuration;
-   animationTime = std::fmod(animationTime, animationDuration);
-
-   // Make 1 function out of the transformation calculations...
-   auto const & trfm = node.animations[animationName];
-   glm::mat4 transNode(1.f);
+translateNode(float animationTime, Transformation const & trfm, glm::mat4 & transNode) {
    if (trfm.numTrans > 0) {
       int prev = 0;
       int next = 0;
@@ -71,8 +58,10 @@ Mesh::animate(SkeletonNode & node,
 
       transNode = glm::translate(transNode, lerped);
    }
+}
 
-   glm::mat4 scaleNode(1.f);
+void
+scNode(float animationTime, Transformation const & trfm, glm::mat4 & scaleNode) {
    if (trfm.numScale > 0) {
       int prev = 0;
       int next = 0;
@@ -91,12 +80,14 @@ Mesh::animate(SkeletonNode & node,
 
       scaleNode = glm::scale(scaleNode, lerped);
    }
+}
 
-   glm::mat4 rotNode(1.f);
+void
+rotateNode(float animationTime, Transformation const & trfm, glm::mat4 & rotNode) {
    if (trfm.numRot > 0) {
       int prev = 0;
       int next = 0;
-      for (int i=0; i<trfm.numTrans-1; ++i) {
+      for (int i=0; i<trfm.numRot-1; ++i) {
          prev = i;
          next = i+1;
          if (trfm.rotTimes[next]>=animationTime) break;
@@ -114,15 +105,90 @@ Mesh::animate(SkeletonNode & node,
       glm::quat q = glm::mix(pR,nR,t);
       rotNode     = glm::toMat4(q);
    }
+}
+
+
+static bool blendi = false;
+void
+Mesh::animate(SkeletonNode & node,
+              glm::mat4  const & parentMat,
+              std::vector<glm::mat4> & boneAnimationMats,
+              float animationTime,
+              std::string animationName) {
+   float animationTime2 = animationTime;
+   glm::mat4 localMat(1.f);
+   glm::mat4 ourMat = parentMat;
+   float animationDuration = m_AnimationInfo[animationName].animationDuration;
+   animationTime = std::fmod(animationTime, animationDuration);
+   auto const & trfm = node.animations[animationName];
+
+
+   float animationDuration2 = m_LastAnimation.animationDuration;
+   animationTime2 = std::fmod(animationTime2, animationDuration2);
+   auto const & trfm2 = node.animations[m_LastAnimation.name];
+
+   if (m_LastAnimation.name != animationName) {
+      blendi = true;
+   }
+
+   glm::mat4 transNode(1.f);
+   translateNode(animationTime, trfm, transNode);
+   glm::mat4 scaleNode(1.f);
+   scNode(animationTime, trfm, scaleNode);
+   glm::mat4 rotNode(1.f);
+   rotateNode(animationTime, trfm, rotNode);
+
+   glm::mat4 transNode2(1.f);
+   translateNode(animationTime2, trfm2, transNode2);
+   glm::mat4 scaleNode2(1.f);
+   scNode(animationTime2, trfm2, scaleNode2);
+   glm::mat4 rotNode2(1.f);
+   rotateNode(animationTime2, trfm2, rotNode2);
 
    auto const & animatedBones = m_AnimationInfo[animationName].animatedBones;
-   auto n = std::find(std::begin(animatedBones), std::end(animatedBones),node.name);
+   auto n = std::find(std::begin(animatedBones), std::end(animatedBones), node.name);
 
-   if (n!=std::end(animatedBones)) localMat = transNode * rotNode * scaleNode;
-   else                                              localMat = node.relTransformation;
+   auto const & animatedBones2 = m_LastAnimation.animatedBones;
+   auto n2 = std::find(std::begin(animatedBones2), std::end(animatedBones2), node.name);
+
+   if (n2!=std::end(animatedBones2) && n!=std::end(animatedBones)) {
+
+      if (blendi && node.name == "Pelvis") {
+         if (blend > 0.f){
+            blend -= 0.05f;
+            std::cout << blend << std::endl;
+         }
+         else {
+            blend = 1.00f;
+         }
+      }
+      auto transN = transNode2 * blend + transNode * (1.f-blend);
+      auto scaleN = scaleNode2 * blend + scaleNode * (1.f-blend);
+      glm::quat q1 = glm::quat_cast(rotNode);
+      glm::quat q2 = glm::quat_cast(rotNode2);
+      if (glm::dot(q1,q2)<0.f) {
+         q1 *=-1.f;
+      }
+      auto rotN = glm::mix(q1,q2,blend);
+      auto rot = glm::toMat4(rotN);
+
+      localMat = transN * scaleN * rot;
+      if (blend<0.0f) {
+         blend = 0.f;
+         blendi = false;
+      }
+   }
+   else if (n!=std::end(animatedBones)) localMat = transNode * rotNode * scaleNode;
+
+   else localMat = node.relTransformation;
 
    ourMat = parentMat * localMat;
    boneAnimationMats[node.index]=ourMat*m_BoneOffSet[node.index];
+
+   if (m_LastAnimation.name != animationName && blendi == 0.f) {
+      m_LastAnimation = m_AnimationInfo[animationName];
+   }
+
    for (auto & child : node.children) {
       animate(child, ourMat, boneAnimationMats, animationTime,animationName);
    }
@@ -221,6 +287,7 @@ Mesh::createSkeleton(aiNode * assimpNode, SkeletonNode & skNode) {
 
    if (boneIndex!=std::end(m_BoneIndex)) {
       skNode.name        = assimpNode->mName.C_Str();
+      std::cout << skNode.name << std::endl;
       skNode.numChildren = assimpNode->mNumChildren;
       skNode.index       = boneIndex->second;
       copyMatrix(assimpNode->mTransformation,skNode.relTransformation);
@@ -258,6 +325,7 @@ Mesh::createAnimation(aiScene const * scene) {
       auto anim = scene->mAnimations[a];
       auto const & animName = anim->mName.C_Str();
       m_AnimationInfo[animName].animationDuration = anim->mDuration;
+      m_AnimationInfo[animName].name = animName;
 
       for (std::size_t i=0; i<anim->mNumChannels; ++i) {
          auto channel = anim->mChannels[i];

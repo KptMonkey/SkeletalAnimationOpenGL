@@ -23,6 +23,7 @@ int main() {
    shader.bindShader(simpleShaderFg);
    Mesh mesh;
    mesh.loadMesh("media/ArmyPilot.x");
+   mesh.initIdle();
    VertexArray va;
 
    va.createIndexBuffer<VertexS>(mesh.m_Mesh, mesh.m_Index);
@@ -47,7 +48,10 @@ int main() {
    auto start = std::chrono::steady_clock::now();
    model = glm::scale(model,glm::vec3(0.08f));
    bool running = true;
+   std::string anim = "Idle";
+   bool blend = false;
    while(running) {
+      const Uint8 *state = SDL_GetKeyboardState(nullptr);
       SDL_Event e;
       while (SDL_PollEvent(&e)) {
          switch (e.type) {
@@ -63,39 +67,37 @@ int main() {
             }
             if (e.key.keysym.scancode == SDL_SCANCODE_W) {
                model = glm::translate(model, glm::vec3(0.f,0.f,-1.0f));
-               auto end = std::chrono::steady_clock::now();
-               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-               glm::mat4 i(1.f);
-               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Run_Forwards");
+               anim = "Run_Forwards";
                break;
             }
             if (e.key.keysym.scancode == SDL_SCANCODE_S) {
                model = glm::translate(model, glm::vec3(0.f,0.f,1.0f));
-               auto end = std::chrono::steady_clock::now();
-               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-               glm::mat4 i(1.f);
-               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Run_backwards");
+               anim = "Walk_Backwards";
                break;
             }
             if (e.key.keysym.scancode == SDL_SCANCODE_A) {
                model = glm::translate(model, glm::vec3(-1.f,0.f,0.0f));
-               auto end = std::chrono::steady_clock::now();
-               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-               glm::mat4 i(1.f);
-               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Strafe_Right");
+               anim = "Strafe_Right";
                break;
             }
             if (e.key.keysym.scancode == SDL_SCANCODE_D) {
                model = glm::translate(model, glm::vec3(1.f,0.f,0.0f));
-               auto end = std::chrono::steady_clock::now();
-               auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-               glm::mat4 i(1.f);
-               mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, "Strafe_Left");
+               anim = "Strafe_Left";
                break;
             }
+         case SDL_KEYUP:
+
+            anim = "Idle";
+            std::cout << "keyup \n";
+            break;
+
          default: break;
          }
       }
+      auto end = std::chrono::steady_clock::now();
+      auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+      glm::mat4 i(1.f);
+      mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, anim);
 
       glViewport(0,0,800,600);
 //      p.bindVBO(mesh.m_BonePos);
@@ -104,9 +106,6 @@ int main() {
       rctx.clearColorBuffer();
       rctx.clearDepthBuffer();
 
-
-//      glm::mat4 i(1.f);
-//      mesh.animate(mesh.m_Skeleton, i, animations, dur/1000.f);
 
       shader.activate();
       shader["mvp"] = cam.Projection * cam.View * model;

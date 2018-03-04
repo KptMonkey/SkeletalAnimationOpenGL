@@ -17,4 +17,7 @@ add_executable(animation ${PROJECT_SOURCE_DIR}/src/main.cpp
                 ${PROJECT_SOURCE_DIR}/src/VertexArray
                 ${PROJECT_SOURCE_DIR}/src/Camera
                 ${PROJECT_SOURCE_DIR}/src/Shader
+                ${PROJECT_SOURCE_DIR}/src/FrameBuffer
+                ${PROJECT_SOURCE_DIR}/src/AnimationController
+                ${PROJECT_SOURCE_DIR}/src/Animation
                )
