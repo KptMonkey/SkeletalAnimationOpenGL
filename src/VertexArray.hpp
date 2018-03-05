@@ -20,12 +20,6 @@ struct VertexN{
     glm::vec3 Normal;
 };
 
-struct VertexS{
-    glm::vec3  Position;
-    glm::vec3  Normal;
-    glm::vec4  Weight;
-    glm::ivec4 BoneId;
-};
 
 enum class GlTypes { Float, Int };
 enum class GlBool { True, False };

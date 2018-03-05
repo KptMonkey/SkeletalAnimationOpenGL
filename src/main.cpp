@@ -5,6 +5,9 @@
 #include "RenderAbstraction.hpp"
 #include "Camera.hpp"
 #include "Mesh.hpp"
+#include "AssimpLoader.hpp"
+#include "Animation.hpp"
+#include "AnimationController.hpp"
 
 
 int main() {
@@ -15,41 +18,40 @@ int main() {
    std::string simpleShaderVx = "shader/simple.vert";
    std::string simpleShaderFg = "shader/simple.frag";
 
-   std::string pointShaderVx = "shader/point.vert"; //Debug visualization
-   std::string pointShaderFg = "shader/point.frag";
-
    Shader shader;
    shader.bindShader(simpleShaderVx);
    shader.bindShader(simpleShaderFg);
-   Mesh mesh;
-   mesh.loadMesh("media/ArmyPilot.x");
-   mesh.initIdle();
-   VertexArray va;
+   Mesh      soldierMesh;
+   Animation soldierAnimation;
 
-   va.createIndexBuffer<VertexS>(mesh.m_Mesh, mesh.m_Index);
+   AssimpLoader loader;
+   loader.loadMesh(soldierMesh, "media/ArmyPilot.x");
+   loader.loadAnimation(soldierAnimation, soldierMesh, "media/ArmyPilot.x");
+
+   AnimationController animationCtrl;
+   animationCtrl.setFirstAnimation(soldierAnimation,"Idle");
+
+   VertexArray va;
+   va.createIndexBuffer<AnimationVertex>(soldierMesh.mesh, soldierMesh.indexVec);
    va.describeVertexArray(0, 3, GlTypes::Float, 14, GlBool::False, 0);
    va.describeVertexArray(1, 3, GlTypes::Float, 14, GlBool::False, 3);
    va.describeVertexArray(2, 4, GlTypes::Float, 14, GlBool::False, 6);
    va.describeVertexArray(3, 4, GlTypes::Int,   14, GlBool::False, 10);
 
-   Shader pointShader;
-   pointShader.bindShader(pointShaderVx);
-   pointShader.bindShader(pointShaderFg);
-   VertexArray p;
-   p.createVertexArray<glm::vec3>(mesh.m_BonePos);
-   p.describeVertexArray(0,3,GlTypes::Float, 3, GlBool::False,0);
-   glm::mat4 model(1.f);
 
    //Sucks though
    std::vector<glm::mat4> animations;
-   for ( int i = 0; i < mesh.m_BoneOffSet.size(); ++i) {
+   for ( int i = 0; i < soldierMesh.boneOffSet.size(); ++i) {
       animations.emplace_back(1.f);
    }
-   auto start = std::chrono::steady_clock::now();
-   model = glm::scale(model,glm::vec3(0.08f));
-   bool running = true;
+
+   glm::mat4 model(1.f);
+   model            = glm::scale(model,glm::vec3(0.08f));
+
+   bool running     = true;
    std::string anim = "Idle";
-   bool blend = false;
+
+   auto start = std::chrono::steady_clock::now();
    while(running) {
       const Uint8 *state = SDL_GetKeyboardState(nullptr);
       SDL_Event e;
@@ -88,7 +90,6 @@ int main() {
          case SDL_KEYUP:
 
             anim = "Idle";
-            std::cout << "keyup \n";
             break;
 
          default: break;
@@ -96,11 +97,8 @@ int main() {
       }
       auto end = std::chrono::steady_clock::now();
       auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
-      glm::mat4 i(1.f);
-      mesh.animate(mesh.m_Skeleton, i, animations, dur/10.f, anim);
-
+      animationCtrl.loopAnimation(soldierAnimation, anim, animations, dur/10.f, soldierMesh);
       glViewport(0,0,800,600);
-//      p.bindVBO(mesh.m_BonePos);
       rctx.enableDepthTest();
       rctx.clearColor(0.0f, 0.0f, 0.1f, 1.0f);
       rctx.clearColorBuffer();
@@ -109,7 +107,7 @@ int main() {
 
       shader.activate();
       shader["mvp"] = cam.Projection * cam.View * model;
-      for (int i = 0; i<mesh.m_BoneOffSet.size(); ++i) {
+      for (int i = 0; i<soldierMesh.boneOffSet.size(); ++i) {
          std::stringstream ss;
          ss <<"bone_mat[";
          ss << i;
@@ -118,14 +116,7 @@ int main() {
       }
 
       va.bindVertexArray();
-      rctx.drawIndex(PrimitiveType::Triangle, mesh.m_Index.size() );
-//      // Debug Visualization of bone positions
-//      rctx.disableDepthTest();
-//      pointShader.activate();
-//      pointShader["mvp"] = cam.Projection * cam.View * model;
-//      p.bindVertexArray();
-//      glEnable(GL_PROGRAM_POINT_SIZE);
-//      rctx.draw(p,PrimitiveType::Points);
+      rctx.drawIndex(PrimitiveType::Triangle, soldierMesh.indexVec.size() );
       rctx.swapBuffers();
    }
 }
