@@ -1,12 +1,11 @@
-#include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
-#include "AssimpLoader.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include "AssimpLoader.hpp"
 
 SkeletonNode *
 findNode(SkeletonNode & node, std::string name) {
@@ -55,8 +54,7 @@ addWeight(float weight, int id, glm::ivec4 & boneIds, glm::vec4 & weights) {
 
 void
 AssimpLoader::loadMesh(Mesh & mesh, std::string path) {
-   Assimp::Importer importer;
-   m_Scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices);
+   m_Scene = m_Importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices);
 
    if (!m_Scene) {
       std::cout << "Could not load scene! \n";
@@ -159,13 +157,7 @@ createSkeleton(aiNode * assimpNode, SkeletonNode & skNode, Mesh const & mesh) {
 }
 
 void
-AssimpLoader::loadAnimation(Animation &animation, Mesh const & mesh, std::string path) {
-   if (m_Scene==nullptr) {
-      std::cout << "Load the mesh first\n";
-      return;
-   }
-   Assimp::Importer importer;
-   m_Scene = importer.ReadFile(path.c_str(), aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices);
+AssimpLoader::loadAnimation(Animation &animation, Mesh const & mesh) {
 
    auto root       = m_Scene->mRootNode;
    createSkeleton(root, animation.skeleton, mesh);

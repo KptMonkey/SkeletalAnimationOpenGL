@@ -6,7 +6,7 @@
 #include "Mesh.hpp"
 
 class AnimationController {
-   public:
+public:
    void
    loopAnimation(Animation &              animation,
                  std::string              animationName,

@@ -28,7 +28,7 @@ int main() {
 
    AssimpLoader loader;
    loader.loadMesh(soldierMesh, "media/ArmyPilot.x");
-   loader.loadAnimation(soldierAnimation, soldierMesh, "media/ArmyPilot.x");
+   loader.loadAnimation(soldierAnimation, soldierMesh);
 
    AnimationController animationCtrl;
    animationCtrl.setFirstAnimation(soldierAnimation,"Idle");

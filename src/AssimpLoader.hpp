@@ -2,6 +2,7 @@
 #include "Mesh.hpp"
 #include "Animation.hpp"
 #include <assimp/scene.h>
+#include <assimp/Importer.hpp>
 
 class AssimpLoader {
 public:
@@ -9,8 +10,9 @@ public:
    loadMesh(Mesh & mesh, std::string path);
 
    void
-   loadAnimation(Animation & animation, Mesh const & mesh, std::string path);
+   loadAnimation(Animation & animation, Mesh const & mesh);
 
 private:
+   Assimp::Importer m_Importer;
    aiScene const * m_Scene;
 };
