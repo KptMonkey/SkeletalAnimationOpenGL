@@ -8,12 +8,13 @@
 #include "AssimpLoader.hpp"
 #include "Animation.hpp"
 #include "AnimationController.hpp"
+#include "KeyBoardHandler.hpp"
 
 
 int main() {
    RenderContext rctx;
    Camera cam = Camera(glm::vec3(0.0f, 5.0f,30.0f), glm::vec3(0.0f, 1.0f, -1.0f));
-
+   KeyboardHandler inputHandler;
    // Shader
    std::string simpleShaderVx = "shader/simple.vert";
    std::string simpleShaderFg = "shader/simple.frag";
@@ -21,6 +22,7 @@ int main() {
    Shader shader;
    shader.bindShader(simpleShaderVx);
    shader.bindShader(simpleShaderFg);
+
    Mesh      soldierMesh;
    Animation soldierAnimation;
 
@@ -53,51 +55,50 @@ int main() {
 
    auto start = std::chrono::steady_clock::now();
    while(running) {
-      const Uint8 *state = SDL_GetKeyboardState(nullptr);
       SDL_Event e;
       while (SDL_PollEvent(&e)) {
          switch (e.type) {
 
          case SDL_QUIT:
-            running = false;
+            inputHandler.handleKeyboardEvent(e.key);
             break;
-
          case SDL_KEYDOWN:
-            if (e.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-               running = false;
-               break;
-            }
-            if (e.key.keysym.scancode == SDL_SCANCODE_W) {
-               model = glm::translate(model, glm::vec3(0.f,0.f,-1.0f));
-               anim = "Run_Forwards";
-               break;
-            }
-            if (e.key.keysym.scancode == SDL_SCANCODE_S) {
-               model = glm::translate(model, glm::vec3(0.f,0.f,1.0f));
-               anim = "Walk_Backwards";
-               break;
-            }
-            if (e.key.keysym.scancode == SDL_SCANCODE_A) {
-               model = glm::translate(model, glm::vec3(-1.f,0.f,0.0f));
-               anim = "Strafe_Right";
-               break;
-            }
-            if (e.key.keysym.scancode == SDL_SCANCODE_D) {
-               model = glm::translate(model, glm::vec3(1.f,0.f,0.0f));
-               anim = "Strafe_Left";
-               break;
-            }
+            inputHandler.handleKeyboardEvent(e.key);
+            break;
          case SDL_KEYUP:
-
+            inputHandler.handleKeyboardEvent(e.key);
             anim = "Idle";
             break;
 
          default: break;
          }
       }
+
+      if (inputHandler.isPressed(SDL_SCANCODE_W)) {
+         model = glm::translate(model, glm::vec3(0.f,0.f,-1.0f));
+         anim = "Run_Forwards";
+      }
+      if (inputHandler.isPressed(SDL_SCANCODE_S)) {
+         model = glm::translate(model, glm::vec3(0.f,0.f,1.0f));
+         anim = "Run_backwards";
+      }
+      if (inputHandler.isPressed(SDL_SCANCODE_A)) {
+         model = glm::translate(model, glm::vec3(-1.f,0.f,0.0f));
+         anim = "Strafe_Right";
+      }
+      if (inputHandler.isPressed(SDL_SCANCODE_D)) {
+         model = glm::translate(model, glm::vec3(1.f,0.f,0.0f));
+         anim = "Strafe_Left";
+      }
+      if (inputHandler.isPressed(SDL_SCANCODE_ESCAPE)) {
+         running = false;
+      }
+
       auto end = std::chrono::steady_clock::now();
       auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end-start ).count();
+
       animationCtrl.loopAnimation(soldierAnimation, anim, animations, dur/10.f, soldierMesh);
+
       glViewport(0,0,800,600);
       rctx.enableDepthTest();
       rctx.clearColor(0.0f, 0.0f, 0.1f, 1.0f);
