@@ -4,8 +4,10 @@ Move the character with W,A,S,D
 
 ToDo:
 - Non loop animations (e.g Jump)
+- IK 
+- IK blends with current animation
+- RagDoll
 - Animation Compression based on https://engineering.riotgames.com/news/compressing-skeletal-animation-data
--RagDoll 
 
 
 Example Code:
