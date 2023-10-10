@@ -1,3 +1,11 @@
+# Install
+It's just tested on Ubuntu 18
+You need also 
+SDL2 and SDL2 Image
+GL, GLU, GLEW 
+Assimp
+
+
 # Animation
 Loads and plays skeletal animations with smooth transitions(Simple blending). Until now .dae and .x is supported. 
 Move the character with W,A,S,D

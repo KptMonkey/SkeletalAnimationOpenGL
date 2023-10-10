@@ -23,3 +23,5 @@ add_executable(animation ${PROJECT_SOURCE_DIR}/src/main.cpp
                 ${PROJECT_SOURCE_DIR}/src/AssimpLoader
                 ${PROJECT_SOURCE_DIR}/src/KeyBoardHandler
                )
+set_target_properties(animation PROPERTIES LINK_FLAGS "-lGL -lGLU -lGLEW -lassimp -lSDL2 -lSDL2_image")
+
