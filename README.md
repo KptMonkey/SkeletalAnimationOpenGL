@@ -4,10 +4,12 @@ You need also
 SDL2 and SDL2 Image
 GL, GLU, GLEW 
 Assimp
+```
 sudo apt-get install libglew-dev
 sudo apt -y install libsdl2-dev
 sudo apt-get install libsdl2-image-dev
  sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev
+```
 
 # Animation
 Loads and plays skeletal animations with smooth transitions(Simple blending). Until now .dae and .x is supported. 
